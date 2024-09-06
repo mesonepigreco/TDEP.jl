@@ -5,4 +5,9 @@ version = "0.1.0"
 
 [deps]
 AtomicEnsemble = "ad7cdd91-c26f-429d-8097-039bc5c95b0a"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
