@@ -21,7 +21,7 @@ function run_tdep()
     # Load a previous calculation if any
     if isfile(save_fname)
         data = load(save_fname)
-    else if isfile(save_last)
+    elseif isfile(save_last)
         data = load(save_last)
     end
     fc_matrix .= data["fc_matrix"]
