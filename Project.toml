@@ -1,0 +1,8 @@
+name = "TDEP"
+uuid = "04c079f1-b493-4fc5-871b-c19b8dd5a156"
+authors = ["Lorenzo Monacelli <mesonepigreco@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+AtomicEnsemble = "ad7cdd91-c26f-429d-8097-039bc5c95b0a"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
