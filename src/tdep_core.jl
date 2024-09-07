@@ -25,6 +25,53 @@ end
 const cache_map = Dict{DataType, Cache}()
 
 @doc raw"""
+    init_params!(fc_matrix :: Matrix{T}, centroids :: Vector{T}, ensemble :: StandardEnsemble)
+
+This model solves the TDEP analitically exploiting the displacement-displacement correlation function.
+"""
+function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector{T}, ensemble :: StandardEnsemble, kT; apply_asr = true) where T
+    n_configs = length(ensemble)
+    nat = length(ensemble.structures[1])
+
+    if apply_asr
+        apply_asr!(ensemble)
+    end
+
+    u_disp = zeros(T, 3nat, n_configs)
+    centroids .= 0
+    for i in 1:n_configs
+        for j in 1:nat
+            for k in 1:3
+                index = (j-1) * 3 + k
+                centroids[index] += ensemble.structures[i].positions[k, j]
+                u_disp[index, i] = ensemble.structures[i].positions[k,j] 
+            end
+        end
+    end
+    centroids ./= n_configs
+
+    for i in 1:n_configs
+        u_disp[:, i] .-= centroids
+    end
+
+
+    # Now fit the displacement-displacements
+    fc_matrix .= 0
+    for i in 1:n_configs
+        @views fc_matrix .+= u_disp[:, i] * u_disp[:, i]'
+    end
+
+    ω, p = eigen(fc_matrix)
+    fc_matrix .= 0
+    # Invert the matrix discarding the low energy values
+    for μ in 1:3nat
+        if ω[μ] > 1e-5
+            @views mul!(fc_matrix, p[:, μ], p[:, μ]', 1.0 / (ω[μ] * kT), 1.0)
+        end
+    end
+end
+
+@doc raw"""
     tdep_fit!(fc_matrix :: Matrix{T}, centroids :: Vector{T}, ensemble :: StandardEnsemble)
 
 Fit the force constants and centroids to the ensemble data.
@@ -87,6 +134,10 @@ function tdep_fit!(fc_matrix :: Matrix{T}, centroids :: Vector{T}, ensemble :: S
     back_grad!(grad, params) = ReverseDiff.gradient!(grad, least_squares, params)
     results = optimize(least_squares, back_grad!, params, optimizer, optimizer_options)
 
+    # copy back 
+    param_vect2mat!(fc_matrix, centroids, params)
+
+    return results
 end
 
 

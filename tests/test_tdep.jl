@@ -3,6 +3,7 @@ using Optim
 using AtomicEnsemble
 using FileIO
 using JLD2
+using Unitful, UnitfulAtomic
 
 
 function run_tdep()
@@ -17,6 +18,10 @@ function run_tdep()
 
     fc_matrix = zeros(Float64, 3nat, 3nat)
     centroids = zeros(Float64, 3nat)
+
+    # Prepare
+    kT = uconvert(u"eV", 450u"K" * UnitfulAtomic.k_au).val
+    tdep_anal!(fc_matrix, centroids, ensemble, kT)
 
     # Load a previous calculation if any
     data = nothing
@@ -34,13 +39,13 @@ function run_tdep()
     end
 
     # Use TDEP to fit the force constants
-    options = Optim.Options(show_trace = true, show_every = 1,
+    options = Optim.Options(show_trace = true, show_every = 1, iterations=5000,
                             callback = x -> begin
                                 TDEP.save_model(typeof(x.value), save_last)
                                 false
                             end)
 
-    tdep_fit!(fc_matrix, centroids, ensemble; optimizer = LBFGS(), optimizer_options = options)
+    tdep_fit!(fc_matrix, centroids, ensemble; optimizer = BFGS(), optimizer_options = options)
 
     # Save on file
     save(save_fname, Dict("fc_matrix" => fc_matrix, "centroids" => centroids))

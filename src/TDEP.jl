@@ -10,6 +10,6 @@ using AtomicEnsemble
 
 include("tdep_core.jl")
 
-export tdep_fit!
+export tdep_fit!, tdep_anal!
 
 end # module TDEP
