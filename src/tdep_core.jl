@@ -29,7 +29,7 @@ const cache_map = Dict{DataType, Cache}()
 
 This model solves the TDEP analitically exploiting the displacement-displacement correlation function.
 """
-function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector{T}, ensemble :: StandardEnsemble, kT; apply_asr = true) where T
+function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: StandardEnsemble, kT; apply_asr = true) where T
     n_configs = length(ensemble)
     nat = length(ensemble.structures[1])
 
@@ -37,7 +37,7 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector{T}, ensemble :: 
         apply_asr!(ensemble)
     end
 
-    u_disp = zeros(T, 3nat, n_configs)
+    u_disp = zeros(eltype(centroids), 3nat, n_configs)
     centroids .= 0
     for i in 1:n_configs
         for j in 1:nat
@@ -56,17 +56,19 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector{T}, ensemble :: 
 
 
     # Now fit the displacement-displacements
-    fc_matrix .= 0
+    type = typeof(ustrip(fc_matrix))
+    δrδr_mat = zeros(typeof(zero(type) * u"Å^2/eV"), 3nat, 3nat)
+
     for i in 1:n_configs
-        @views fc_matrix .+= u_disp[:, i] * u_disp[:, i]'
+        @views δrδr_mat .+= u_disp[:, i] * u_disp[:, i]' ./ kT
     end
 
-    ω, p = eigen(fc_matrix)
-    fc_matrix .= 0
+    ω, p = eigen(δrδr_mat)
+    fc_matrix .= 0u"eV/Å^2"
     # Invert the matrix discarding the low energy values
     for μ in 1:3nat
-        if ω[μ] > 1e-5
-            @views mul!(fc_matrix, p[:, μ], p[:, μ]', 1.0 / (ω[μ] * kT), 1.0)
+        if ω[μ] > 1e-5u"Å^2/eV"
+            @views mul!(fc_matrix, p[:, μ], p[:, μ]', 1.0 / (ω[μ]), 1.0)
         end
     end
 end
