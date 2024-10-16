@@ -4,24 +4,32 @@ using AtomicEnsemble
 using FileIO
 using JLD2
 using Unitful, UnitfulAtomic
+import PhysicalConstants.CODATA2018 as CONST
 
 
 function run_tdep()
     ensemble_loc = "ensemble.jld2"
     save_fname = joinpath(@__DIR__, "tdep_results.jld2")
     save_last = joinpath(@__DIR__, "tdep_last.jld2")
+    save_good = joinpath(@__DIR__, "tdep_drdr.jld2")
 
     ensemble = load_ensemble(joinpath(@__DIR__, ensemble_loc))
     apply_asr!(ensemble)
     # Get the number of atoms
     nat = length(ensemble.structures[1])
 
-    fc_matrix = zeros(Float64, 3nat, 3nat)
-    centroids = zeros(Float64, 3nat)
+    fc_matrix = zeros(Float64, 3nat, 3nat) * u"eV/Å^2"
+    centroids = zeros(Float64, 3nat) * u"Å"
 
     # Prepare
-    kT = uconvert(u"eV", 450u"K" * UnitfulAtomic.k_au).val
+    # kT = uconvert(u"eV", 450u"K" * UnitfulAtomic.k_au).val
+    kT = uconvert(u"eV", 450u"K" * CONST.k_B)
+
+    println("kT = $kT")
+    println("centroids: ", centroids[1])
     tdep_anal!(fc_matrix, centroids, ensemble, kT)
+    save(save_good, Dict("fc_matrix" => fc_matrix, "centroids" => centroids))
+
 
     # Load a previous calculation if any
     data = nothing

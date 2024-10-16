@@ -25,9 +25,11 @@ end
 const cache_map = Dict{DataType, Cache}()
 
 @doc raw"""
-    init_params!(fc_matrix :: Matrix{T}, centroids :: Vector{T}, ensemble :: StandardEnsemble)
+    tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector{T}, ensemble :: StandardEnsemble, kT; apply_asr = true)
 
-This model solves the TDEP analitically exploiting the displacement-displacement correlation function.
+Perform the TDEP analysis on the ensemble data.
+This routine exploits the analytical solution to the TDEP equations: 
+the displacement-displacement correlation matrix.
 """
 function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: StandardEnsemble, kT; apply_asr = true) where T
     n_configs = length(ensemble)
@@ -38,7 +40,7 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
     end
 
     u_disp = zeros(eltype(centroids), 3nat, n_configs)
-    centroids .= 0
+    centroids .= 0u"Å"
     for i in 1:n_configs
         for j in 1:nat
             for k in 1:3
@@ -56,19 +58,22 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
 
 
     # Now fit the displacement-displacements
-    type = typeof(ustrip(fc_matrix))
+    type = eltype(ustrip(fc_matrix))
     δrδr_mat = zeros(typeof(zero(type) * u"Å^2/eV"), 3nat, 3nat)
 
     for i in 1:n_configs
         @views δrδr_mat .+= u_disp[:, i] * u_disp[:, i]' ./ kT
     end
 
-    ω, p = eigen(δrδr_mat)
+    ω, p = eigen(ustrip(δrδr_mat))
+    ω *= unit(δrδr_mat[1])
     fc_matrix .= 0u"eV/Å^2"
     # Invert the matrix discarding the low energy values
     for μ in 1:3nat
         if ω[μ] > 1e-5u"Å^2/eV"
-            @views mul!(fc_matrix, p[:, μ], p[:, μ]', 1.0 / (ω[μ]), 1.0)
+            fc_matrix .+= p[:, μ] * p[:, μ]' ./ ω[μ]
+
+            #@views mul!(fc_matrix, p[:, μ], p[:, μ]', 1.0 / (ω[μ]), 1.0)
         end
     end
 end
