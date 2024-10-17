@@ -32,19 +32,19 @@ function run_tdep()
 
 
     # Load a previous calculation if any
-    data = nothing
-    if isfile(save_fname)
-        data = load(save_fname)
-        println("Loading previous calculation from $save_fname")
-    elseif isfile(save_last)
-        data = load(save_last)
-        println("Loading previous calculation from $save_last")
-    end
-    
-    if data != nothing
-        fc_matrix .= data["fc_matrix"]
-        centroids .= data["centroids"]
-    end
+    # data = nothing
+    # if isfile(save_fname)
+    #     data = load(save_fname)
+    #     println("Loading previous calculation from $save_fname")
+    # elseif isfile(save_last)
+    #     data = load(save_last)
+    #     println("Loading previous calculation from $save_last")
+    # end
+    # 
+    # if data != nothing
+    #     fc_matrix .= data["fc_matrix"]
+    #     centroids .= data["centroids"]
+    # end
 
     # Use TDEP to fit the force constants
     options = Optim.Options(show_trace = true, show_every = 1, iterations=5000,

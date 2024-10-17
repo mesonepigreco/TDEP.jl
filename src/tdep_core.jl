@@ -62,15 +62,21 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
     δrδr_mat = zeros(typeof(zero(type) * u"Å^2/eV"), 3nat, 3nat)
 
     for i in 1:n_configs
-        @views δrδr_mat .+= u_disp[:, i] * u_disp[:, i]' ./ kT
+        for a in 1:3nat
+            myval = u_disp[a, i]
+            for b in 1:3nat
+                δrδr_mat[b, a] += myval * u_disp[b, i] / kT
+            end
+        end
     end
+    δrδr_mat ./= n_configs
 
     ω, p = eigen(ustrip(δrδr_mat))
     ω *= unit(δrδr_mat[1])
     fc_matrix .= 0u"eV/Å^2"
     # Invert the matrix discarding the low energy values
     for μ in 1:3nat
-        if ω[μ] > 1e-5u"Å^2/eV"
+        if ω[μ] > 1e-6u"Å^2/eV"
             fc_matrix .+= p[:, μ] * p[:, μ]' ./ ω[μ]
 
             #@views mul!(fc_matrix, p[:, μ], p[:, μ]', 1.0 / (ω[μ]), 1.0)
@@ -88,14 +94,18 @@ and the forces in the ensemble.
 The final force constants and centroids are stored in the `fc_matrix` and `centroids` arguments (modified in-place).
 
 """
-function tdep_fit!(fc_matrix :: Matrix{T}, centroids :: Vector{T}, ensemble :: StandardEnsemble;
-        optimizer = LBFGS(), optimizer_options = Optim.options(iterations=1000, show_trace = true)) where T
+function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ensemble :: StandardEnsemble;
+        optimizer = LBFGS(), optimizer_options = Optim.options(iterations=1000, show_trace = true))
     # Check consistency between sizes
     n_structures = length(ensemble)
     nat3 = size(fc_matrix, 1)
     nat = nat3 ÷ 3
+
     @assert nat3 == length(centroids)
     @assert length(ensemble.structures) == size(ensemble.forces, 3)
+
+    # Get the type of the matrix
+    T = eltype(ustrip(fc_matrix))
 
     fitted_forces = zeros(T, nat3)
     u_disps = zeros(T, nat3)
@@ -177,7 +187,7 @@ end
 Pack the force constants matrix and centroids vector into a parameters vector.
 Inplace modifies params.
 """
-function mat2param_vect!(params :: Vector{T}, fc_matrix :: Matrix{T}, centroids :: Vector{T}) where {T}
+function mat2param_vect!(params :: AbstractVector, fc_matrix :: AbstractMatrix, centroids :: AbstractVector) 
     count = 1
     nat3 = size(fc_matrix, 1)
     for i in 1:nat3
