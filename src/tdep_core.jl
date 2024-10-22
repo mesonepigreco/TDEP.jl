@@ -203,7 +203,11 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
     results = optimize(least_squares, back_grad!, params, optimizer, optimizer_options)
 
     # copy back 
-    param_vect2mat!(fc_matrix, centroids, Optim.minimizer(results))
+    println("Optimization results: ", Optim.minimizer(results))
+    param_vect2mat!(fc_matrix, centroids, Optim.minimizer(results); 
+                    vector_generators = vector_generators, 
+                    fc_generators = fc_generators, 
+                    symmetry_group = symmetry_group)
 
     return results
 end
