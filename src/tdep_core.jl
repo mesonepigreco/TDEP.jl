@@ -55,7 +55,7 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
 
     # Apply the symmetries on the centroids
     if symmetry_group != nothing
-        symmetry_group.symmetrize_centroids!(centroids)
+        symmetry_group.symmetrize_centroid!(ustrip(centroids))
     end
 
     for i in 1:n_configs
@@ -91,7 +91,7 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
 
     # Impose the symmetries
     if symmetry_group != nothing
-        symmetry_group.symmetrize_fc!(fc_matrix)
+        symmetry_group.symmetrize_fc!(ustrip(fc_matrix))
     end
 end
 
@@ -129,7 +129,8 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
     if symmetry_group != nothing
         # Generators of the displacements
         vector_generators = AtomicSymmetries.get_vector_generators(symmetry_group)
-        fc_generators = AtomicSymmetries.get_matrix_generators(symmetry_group)
+        @info "Finding the generators of the force constants"
+        @time fc_generators = AtomicSymmetries.get_matrix_generators(symmetry_group)
 
         # Count the number of parameters
         n_params = length(vector_generators) + length(fc_generators)
@@ -143,7 +144,8 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
     asr_centroids! = ASRVectorConstraint!(3)
 
     # Fill the initial parameters with the provided matrix
-    mat2param_vect!(params, fc_matrix, centroids; 
+    @info "Converting the matrix to parameters"
+    @time mat2param_vect!(params, fc_matrix, centroids; 
                     vector_generators = vector_generators, 
                     fc_generators = fc_generators, 
                     symmetry_group = symmetry_group)
@@ -156,7 +158,8 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
         u_disps = my_cache.u_disps
         fitted_forces = my_cache.fitted_forces
 
-        param_vect2mat!(fc_matrix, centroids, params; 
+        @info "Unpacking the parameters"
+        @time param_vect2mat!(fc_matrix, centroids, params; 
                         vector_generators = vector_generators, 
                         fc_generators = fc_generators, 
                         symmetry_group = symmetry_group)
@@ -167,28 +170,36 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
 
         # Get the displacements
         least_squares_res = zero(T)
-        for i in 1:n_structures
-            for j in 1:nat
-                for k in 1:3
-                    h = (j - 1) * 3 + k
-                    u_disps[h] = ensemble.structures[i].positions[k, j] - centroids[h]
+        @info "Computing the least squares"
+        @time begin
+            for i in 1:n_structures
+                for j in 1:nat
+                    for k in 1:3
+                        h = (j - 1) * 3 + k
+                        u_disps[h] = ensemble.structures[i].positions[k, j] - centroids[h]
+                    end
                 end
-            end
-            #fitted_forces .= fc_matrix * u_disps
-            mul!(fitted_forces, fc_matrix, u_disps, -1.0, 0.0)
+                #fitted_forces .= fc_matrix * u_disps
+                mul!(fitted_forces, fc_matrix, u_disps, -1.0, 0.0)
 
-            for j in 1:nat
-                for k in 1:3
-                    h = (j - 1) * 3 + k
-                    least_squares_res += abs2(fitted_forces[h] - ensemble.forces[k, j, i])
+                for j in 1:nat
+                    for k in 1:3
+                        h = (j - 1) * 3 + k
+                        least_squares_res += abs2(fitted_forces[h] - ensemble.forces[k, j, i])
+                    end
                 end
             end
         end
 
-        least_squares_res
+        least_squares_res / n_structures
     end
 
-    back_grad!(grad, params) = ReverseDiff.gradient!(grad, least_squares, params)
+    # Prepare the gradient tape
+    diff_tape = ReverseDiff.GradientTape(least_squares, params)
+    diff_tape_compiled = ReverseDiff.compile(diff_tape)
+
+
+    back_grad!(grad, params) = ReverseDiff.gradient!(grad, diff_tape_compiled, params)
     results = optimize(least_squares, back_grad!, params, optimizer, optimizer_options)
 
     # copy back 
@@ -229,14 +240,14 @@ function param_vect2mat!(fc_matrix :: AbstractArray{T}, centroids :: AbstractArr
         n_matrices = length(fc_generators)
 
         if n_vectors > 0
-            AtomicSymmetries.get_vector_from_generators!(centroids,
+            @views AtomicSymmetries.get_vector_from_generators!(centroids,
                                                          vector_generators, 
                                                          params[1:n_vectors], 
                                                          symmetry_group)
         else
             centroids .= 0
         end
-        AtomicSymmetries.get_fc_from_generators!(fc_matrix, 
+        @views AtomicSymmetries.get_fc_from_generators!(fc_matrix, 
                                                  fc_generators, 
                                                  params[n_vectors+1:end], 
                                                  symmetry_group)
