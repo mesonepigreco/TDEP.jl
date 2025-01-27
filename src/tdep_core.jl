@@ -41,7 +41,7 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
     end
 
     u_disp = zeros(eltype(centroids), 3nat, n_configs)
-    centroids .= 0u"Å"
+    centroids .= 0.0
     for i in 1:n_configs
         for j in 1:nat
             for k in 1:3
@@ -65,7 +65,7 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
 
     # Now fit the displacement-displacements
     type = eltype(ustrip(fc_matrix))
-    δrδr_mat = zeros(typeof(zero(type) * u"Å^2/eV"), 3nat, 3nat)
+    δrδr_mat = zeros(typeof(zero(type)), 3nat, 3nat)
 
     for i in 1:n_configs
         for a in 1:3nat
@@ -79,10 +79,10 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
 
     ω, p = eigen(ustrip(δrδr_mat))
     ω *= unit(δrδr_mat[1])
-    fc_matrix .= 0u"eV/Å^2"
+    fc_matrix .= 0.0
     # Invert the matrix discarding the low energy values
     for μ in 1:3nat
-        if ω[μ] > 1e-6u"Å^2/eV"
+        if ω[μ] > ustrip(auconvert(1e-4, "meV"))
             fc_matrix .+= p[:, μ] * p[:, μ]' ./ ω[μ]
 
             #@views mul!(fc_matrix, p[:, μ], p[:, μ]', 1.0 / (ω[μ]), 1.0)
