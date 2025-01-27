@@ -82,7 +82,7 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
     fc_matrix .= 0.0
     # Invert the matrix discarding the low energy values
     for μ in 1:3nat
-        if ω[μ] > ustrip(auconvert(1e-4, "meV"))
+        if ω[μ] > ustrip(auconvert(1e-4u"meV"))
             fc_matrix .+= p[:, μ] * p[:, μ]' ./ ω[μ]
 
             #@views mul!(fc_matrix, p[:, μ], p[:, μ]', 1.0 / (ω[μ]), 1.0)
