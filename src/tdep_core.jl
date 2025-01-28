@@ -55,7 +55,8 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
 
     # Apply the symmetries on the centroids
     if symmetry_group != nothing
-        symmetry_group.symmetrize_centroid!(ustrip(centroids))
+        println("centroid symmetrization")
+        symmetry_group.symmetrize_centroid!(centroids)
     end
 
     for i in 1:n_configs
@@ -91,7 +92,8 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
 
     # Impose the symmetries
     if symmetry_group != nothing
-        symmetry_group.symmetrize_fc!(ustrip(fc_matrix))
+        println("fc matrix symmetrization")
+        symmetry_group.symmetrize_fc!(fc_matrix)
     end
 end
 
