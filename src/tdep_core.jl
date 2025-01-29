@@ -56,7 +56,9 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
     # Apply the symmetries on the centroids
     if symmetry_group != nothing
         println("centroid symmetrization")
-        symmetry_group.symmetrize_centroid!(centroids)
+        symmetize_positions!(reshape(centroids, 3, nat), 
+                             ensemble.structures[1].cell,
+                             symmetry_group)
     end
 
     for i in 1:n_configs
