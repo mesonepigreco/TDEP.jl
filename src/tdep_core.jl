@@ -57,11 +57,15 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
         cell = ustrip.(auconvert.(ensemble.structures[1].cell))
         println("centroid symmetrization")
         tmp_cent = reshape(centroids, 3, nat)
+        println()
         println("Before symmetrization: ", tmp_cent')
+        println("Cell: ", cell')
+        println()
         symmetrize_positions!(reshape(centroids, 3, nat), 
                               cell,
                               symmetry_group)
         println("After symmetrization: ", tmp_cent')
+        println()
     end
 
     for i in 1:n_configs
