@@ -35,9 +35,9 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
     n_configs = length(ensemble)
     nat = length(ensemble.structures[1])
 
-    if apply_asr
-        apply_asr!(ensemble)
-    end
+    # if apply_asr
+    #     apply_asr!(ensemble)
+    # end
 
     u_disp = zeros(eltype(centroids), 3nat, n_configs)
     centroids .= 0.0
@@ -70,7 +70,21 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
 
     for i in 1:n_configs
         u_disp[:, i] .-= centroids
+
+        # Remove the ASR
+        for j in 1:3
+            δ = 0 
+            for k in 1:nat
+                δ += u_disp[(k-1)*3 + j, i]  / nat
+            end
+
+            for k in 1:nat
+                u_disp[(k-1)*3 + j, i] -= δ
+            end
+        end
     end
+
+
 
 
     # Now fit the displacement-displacements
