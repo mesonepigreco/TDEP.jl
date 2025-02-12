@@ -149,7 +149,7 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
     if cartesian
         tmp_mat = similar(fc_matrix)
         tmp_cent = similar(centroids)
-        get_crystal_coords!(tmp_cent, centroids, cell)
+        get_crystal_coords!(reshape(tmp_cent, 3, :), reshape(centroids, 3, :), cell)
         AtomicSymmetries.cart_cryst_matrix_conversion!(tmp_mat, fc_matrix, cell; cart_to_cryst = true)
 
         centroids .= tmp_cent
@@ -263,7 +263,7 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
     
     # Convert the output to cartesian
     if cartesian
-        get_cartesian_coords!(tmp_cent, centroids, cell)
+        get_cartesian_coords!(reshape(tmp_cent, 3, :), reshape(centroids, 3, :), cell)
         AtomicSymmetries.cart_cryst_matrix_conversion!(tmp_mat, fc_matrix, cell; cart_to_cryst = false)
 
         centroids .= tmp_cent
