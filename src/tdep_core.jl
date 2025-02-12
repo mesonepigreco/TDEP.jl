@@ -270,7 +270,7 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
         fc_matrix .= tmp_mat
     end
 
-    return results
+    return results, fc_matrix, centroids
 end
 
 
