@@ -160,7 +160,7 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
     fc_generators = nothing
     if symmetry_group != nothing
         # Generators of the displacements
-        vector_generators = AtomicSymmetries.get_vector_generators(symmetry_group)
+        vector_generators = AtomicSymmetries.get_vector_generators(symmetry_group, cell)
         @info "Finding the generators of the force constants"
         @time fc_generators = AtomicSymmetries.get_matrix_generators(symmetry_group, cell)
 
