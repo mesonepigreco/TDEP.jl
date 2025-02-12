@@ -137,7 +137,7 @@ In this case both the input and output data will be assumed to be in cartesian c
 """
 function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ensemble :: StandardEnsemble;
         symmetry_group = nothing,
-        optimizer = LBFGS(), optimizer_options = Optim.options(iterations=1000, show_trace = true), cartesian = true)
+        optimizer = LBFGS(), optimizer_options = Optim.Options(iterations=1000, show_trace = true), cartesian = true)
     # Check consistency between sizes
     n_structures = length(ensemble)
     nat3 = size(fc_matrix, 1)
