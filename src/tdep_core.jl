@@ -116,12 +116,12 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
     # Impose the symmetries
     if symmetry_group != nothing
         println("fc matrix symmetrization")
-        symmetry_group.symmetrize_fc!(fc_matrix)
+        symmetrize_fc!(fc_matrix, cell, symmetry_group)
     end
 end
 
 @doc raw"""
-    tdep_fit!(fc_matrix :: Matrix{T}, centroids :: Vector{T}, ensemble :: StandardEnsemble)
+    tdep_fit!(fc_matrix :: Matrix{T}, centroids :: Vector{T}, ensemble :: StandardEnsemble; symmetry_group = nothing, optimizer = LBFGS(), optimizer_options = Optim.options(), cartesian = true)
 
 Fit the force constants and centroids to the ensemble data.
 
@@ -129,14 +129,33 @@ The fit is performed minimizing the least squares error between harmonic forces
 and the forces in the ensemble.
 The final force constants and centroids are stored in the `fc_matrix` and `centroids` arguments (modified in-place).
 
+The inner algorithm performs the calculation in crystalline space
+(easier for symmetry reasons).
+
+If you want to use cartesian coordinates, set `cartesian = true` (default).
+In this case both the input and output data will be assumed to be in cartesian coordinates.
 """
 function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ensemble :: StandardEnsemble;
         symmetry_group = nothing,
-        optimizer = LBFGS(), optimizer_options = Optim.options(iterations=1000, show_trace = true))
+        optimizer = LBFGS(), optimizer_options = Optim.options(iterations=1000, show_trace = true), cartesian = true)
     # Check consistency between sizes
     n_structures = length(ensemble)
     nat3 = size(fc_matrix, 1)
     nat = nat3 ÷ 3
+
+    cell = ustrip.(auconvert.(ensemble.structures[1].cell))
+
+    # Convert the input to cartesian
+    if cartesian
+        tmp_mat = similar(fc_matrix)
+        tmp_cent = similar(centroids)
+        get_crystal_coords!(tmp_cent, centroids, cell)
+        AtomicSymmetries.cart_cryst_matrix_conversion!(tmp_mat, fc_matrix, cell; cart_to_cryst = true)
+
+        centroids .= tmp_cent
+        fc_matrix .= tmp_mat
+    end
+
 
     @assert nat3 == length(centroids)
     @assert length(ensemble.structures) == size(ensemble.forces, 3)
@@ -165,8 +184,15 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
     @info "Fitting the force constants with $n_params parameters"
 
     # Get the ASR functions
-    asr_fc! = ASRMatrixConstraint!(3)
-    asr_centroids! = ASRVectorConstraint!(3)
+    asr! = ASRConstraint!(3)
+
+    # Convert the ensemble forces and displacements to crystalline coords
+    ensemble_coords_cryst = zeros(T, 3, nat, n_structures)
+    ensemble_forces_cryst = zeros(T, 3, nat, n_structures)
+    for i in 1:n_structures
+        @views get_crystal_coords!(ensemble_coords_cryst[:, :, i], ustrip.(auconvert.(ensemble.structures[i].positions)), cell)
+        @views get_crystal_coords!(ensemble_forces_cryst[:, :, i], ensemble.forces[:, :, i], cell)
+    end
 
     # Fill the initial parameters with the provided matrix
     @info "Converting the matrix to parameters"
@@ -190,8 +216,8 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
                         symmetry_group = symmetry_group)
 
         # Apply the ASR!
-        asr_fc!(fc_matrix)
-        asr_centroids!(centroids)
+        asr!(fc_matrix)
+        asr!(centroids)
 
         # Get the displacements
         least_squares_res = zero(T)
@@ -201,7 +227,8 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
                 for j in 1:nat
                     for k in 1:3
                         h = (j - 1) * 3 + k
-                        u_disps[h] = ensemble.structures[i].positions[k, j] - centroids[h]
+                        #u_disps[h] = ensemble.structures[i].positions[k, j] - centroids[h]
+                        u_disps[h] = ensemble_coords_cryst[k, j, i] - centroids[h]
                     end
                 end
                 #fitted_forces .= fc_matrix * u_disps
@@ -233,6 +260,15 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
                     vector_generators = vector_generators, 
                     fc_generators = fc_generators, 
                     symmetry_group = symmetry_group)
+    
+    # Convert the output to cartesian
+    if cartesian
+        get_cartesian_coords!(tmp_cent, centroids, cell)
+        AtomicSymmetries.cart_cryst_matrix_conversion!(tmp_mat, fc_matrix, cell; cart_to_cryst = false)
+
+        centroids .= tmp_cent
+        fc_matrix .= tmp_mat
+    end
 
     return results
 end
@@ -321,7 +357,8 @@ function mat2param_vect!(params :: AbstractVector, fc_matrix :: AbstractMatrix, 
                                                           fc_generators, 
                                                           symmetry_group)
     end
-end
+
+    end
 
 # Get the number of parameters
 @doc raw"""
