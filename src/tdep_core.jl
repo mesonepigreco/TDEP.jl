@@ -137,7 +137,7 @@ In this case both the input and output data will be assumed to be in cartesian c
 """
 function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ensemble :: StandardEnsemble;
         symmetry_group = nothing,
-        optimizer = LBFGS(), optimizer_options = Optim.Options(iterations=1000, show_trace = true), cartesian = true)
+        optimizer = LBFGS(), optimizer_options = Optim.Options(iterations=1000, show_trace = true))
     # Check consistency between sizes
     n_structures = length(ensemble)
     nat3 = size(fc_matrix, 1)
@@ -146,19 +146,7 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
     cell = ustrip.(auconvert.(ensemble.structures[1].cell))
 
     # Convert the input to cartesian
-    if cartesian
-        tmp_mat = similar(fc_matrix)
-        tmp_cent = similar(centroids)
-        get_crystal_coords!(reshape(tmp_cent, 3, :), reshape(centroids, 3, :), cell)
-        AtomicSymmetries.cart_cryst_matrix_conversion!(tmp_mat, fc_matrix, cell; cart_to_cryst = true)
-
-        centroids .= tmp_cent
-        fc_matrix .= tmp_mat
-    end
-
-
-    @assert nat3 == length(centroids)
-    @assert length(ensemble.structures) == size(ensemble.forces, 3)
+    @assert nat3 == length(centroids) @assert length(ensemble.structures) == size(ensemble.forces, 3)
 
     # Get the type of the matrix
     T = eltype(ustrip(fc_matrix))
@@ -174,7 +162,7 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
         # Generators of the displacements
         vector_generators = AtomicSymmetries.get_vector_generators(symmetry_group)
         @info "Finding the generators of the force constants"
-        @time fc_generators = AtomicSymmetries.get_matrix_generators(symmetry_group)
+        @time fc_generators = AtomicSymmetries.get_matrix_generators(symmetry_group, cell)
 
         # Count the number of parameters
         n_params = length(vector_generators) + length(fc_generators)
@@ -187,12 +175,12 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
     asr! = ASRConstraint!(3)
 
     # Convert the ensemble forces and displacements to crystalline coords
-    ensemble_coords_cryst = zeros(T, 3, nat, n_structures)
-    ensemble_forces_cryst = zeros(T, 3, nat, n_structures)
-    for i in 1:n_structures
-        @views get_crystal_coords!(ensemble_coords_cryst[:, :, i], ustrip.(auconvert.(ensemble.structures[i].positions)), cell)
-        @views get_crystal_coords!(ensemble_forces_cryst[:, :, i], ensemble.forces[:, :, i], cell)
-    end
+    # ensemble_coords_cryst = zeros(T, 3, nat, n_structures)
+    # ensemble_forces_cryst = zeros(T, 3, nat, n_structures)
+    # for i in 1:n_structures
+    #     @views get_crystal_coords!(ensemble_coords_cryst[:, :, i], ustrip.(auconvert.(ensemble.structures[i].positions)), cell)
+    #     @views get_crystal_coords!(ensemble_forces_cryst[:, :, i], ensemble.forces[:, :, i], cell)
+    # end
 
     # Fill the initial parameters with the provided matrix
     @info "Converting the matrix to parameters"
@@ -227,8 +215,8 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
                 for j in 1:nat
                     for k in 1:3
                         h = (j - 1) * 3 + k
-                        #u_disps[h] = ensemble.structures[i].positions[k, j] - centroids[h]
-                        u_disps[h] = ensemble_coords_cryst[k, j, i] - centroids[h]
+                        u_disps[h] = ensemble.structures[i].positions[k, j] - centroids[h]
+                        #u_disps[h] = ensemble_coords_cryst[k, j, i] - centroids[h]
                     end
                 end
                 #fitted_forces .= fc_matrix * u_disps
@@ -262,13 +250,13 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
                     symmetry_group = symmetry_group)
     
     # Convert the output to cartesian
-    if cartesian
-        get_cartesian_coords!(reshape(tmp_cent, 3, :), reshape(centroids, 3, :), cell)
-        AtomicSymmetries.cart_cryst_matrix_conversion!(tmp_mat, fc_matrix, cell; cart_to_cryst = false)
+    # if cartesian
+    #     get_cartesian_coords!(reshape(tmp_cent, 3, :), reshape(centroids, 3, :), cell)
+    #     AtomicSymmetries.cart_cryst_matrix_conversion!(tmp_mat, fc_matrix, cell; cart_to_cryst = false)
 
-        centroids .= tmp_cent
-        fc_matrix .= tmp_mat
-    end
+    #     centroids .= tmp_cent
+    #     fc_matrix .= tmp_mat
+    # end
 
     return results, fc_matrix, centroids
 end

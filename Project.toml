@@ -18,5 +18,5 @@ UnitfulAtomic = "a7773ee8-282e-5fa2-be4e-bd808c38a91a"
 
 
 [compat]
-AtomicSymmetries = "^0.4"
-Optim = "^1.11"
+AtomicSymmetries = "^0.5"
+
