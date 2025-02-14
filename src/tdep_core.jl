@@ -174,13 +174,13 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
     # Get the ASR functions
     asr! = ASRConstraint!(3)
 
-    # Convert the ensemble forces and displacements to crystalline coords
-    # ensemble_coords_cryst = zeros(T, 3, nat, n_structures)
-    # ensemble_forces_cryst = zeros(T, 3, nat, n_structures)
-    # for i in 1:n_structures
-    #     @views get_crystal_coords!(ensemble_coords_cryst[:, :, i], ustrip.(auconvert.(ensemble.structures[i].positions)), cell)
-    #     @views get_crystal_coords!(ensemble_forces_cryst[:, :, i], ensemble.forces[:, :, i], cell)
-    # end
+    # Convert the ensemble forces and displacements to atomic units
+    ensemble_coords = zeros(T, 3, nat, n_structures)
+    ensemble_forces = zeros(T, 3, nat, n_structures)
+    for i in 1:n_structures
+        ensemble_coords[:, :, i] =  ustrip.(auconvert.(ensemble.structures[i].positions))
+        @views ensemble_forces[:, :, i] =  ustrip.(auconvert.(ensemble.forces[:, :, i]))
+    end
 
     # Fill the initial parameters with the provided matrix
     @info "Converting the matrix to parameters"
@@ -215,8 +215,8 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
                 for j in 1:nat
                     for k in 1:3
                         h = (j - 1) * 3 + k
-                        u_disps[h] = ensemble.structures[i].positions[k, j] - centroids[h]
-                        #u_disps[h] = ensemble_coords_cryst[k, j, i] - centroids[h]
+                        #u_disps[h] = ensemble.structures[i].positions[k, j] - centroids[h]
+                        u_disps[h] = ensemble_coords[k, j, i] - centroids[h]
                     end
                 end
                 #fitted_forces .= fc_matrix * u_disps
@@ -225,7 +225,8 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
                 for j in 1:nat
                     for k in 1:3
                         h = (j - 1) * 3 + k
-                        least_squares_res += abs2(fitted_forces[h] - ensemble.forces[k, j, i])
+                        #least_squares_res += abs2(fitted_forces[h] - ensemble.forces[k, j, i])
+                        least_squares_res += abs2(fitted_forces[h] - ensemble_forces[k, j, i])
                     end
                 end
             end
