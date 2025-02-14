@@ -1,4 +1,4 @@
-using Tests
+using Test
 
 @testset "PbTe TDEP" begin
     include("test_tdep_harmonic.jl")
