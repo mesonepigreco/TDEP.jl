@@ -184,7 +184,7 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
 
     # Fill the initial parameters with the provided matrix
     @info "Converting the matrix to parameters"
-    @time mat2param_vect!(params, fc_matrix, centroids; 
+    @time mat2param_vect!(params, fc_matrix, centroids, cell; 
                     vector_generators = vector_generators, 
                     fc_generators = fc_generators, 
                     symmetry_group = symmetry_group)
@@ -198,7 +198,7 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
         fitted_forces = my_cache.fitted_forces
 
         @info "Unpacking the parameters"
-        @time param_vect2mat!(fc_matrix, centroids, params; 
+        @time param_vect2mat!(fc_matrix, centroids, params, cell; 
                         vector_generators = vector_generators, 
                         fc_generators = fc_generators, 
                         symmetry_group = symmetry_group)
@@ -244,7 +244,7 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
 
     # copy back 
     println("Optimization results: ", Optim.minimizer(results))
-    param_vect2mat!(fc_matrix, centroids, Optim.minimizer(results); 
+    param_vect2mat!(fc_matrix, centroids, Optim.minimizer(results), cell; 
                     vector_generators = vector_generators, 
                     fc_generators = fc_generators, 
                     symmetry_group = symmetry_group)
@@ -263,12 +263,12 @@ end
 
 
 @doc raw"""
-    param_vect2mat!(fc_matrix :: Matrix{T}, centroids :: Vector{T}, params :: Vector{T})
+    param_vect2mat!(fc_matrix :: Matrix{T}, centroids :: Vector{T}, params :: Vector{T}, cell ::AbstractMatrix)
 
 Unpack the parameters vector into the force constants matrix and centroids vector.
 Inplace modifies fc_matrix and centorids.
 """
-function param_vect2mat!(fc_matrix :: AbstractArray{T}, centroids :: AbstractArray{T}, params :: AbstractArray{T}; 
+function param_vect2mat!(fc_matrix :: AbstractArray{T}, centroids :: AbstractArray{T}, params :: AbstractArray{T}, cell :: AbstractMatrix; 
         vector_generators = nothing,
         fc_generators = nothing,
         symmetry_group = nothing
@@ -303,17 +303,18 @@ function param_vect2mat!(fc_matrix :: AbstractArray{T}, centroids :: AbstractArr
         @views AtomicSymmetries.get_fc_from_generators!(fc_matrix, 
                                                  fc_generators, 
                                                  params[n_vectors+1:end], 
-                                                 symmetry_group)
+                                                 symmetry_group,
+                                                 cell)
     end
 end
 
 @doc raw"""
-    mat2param_vect!(params :: Vector{T}, fc_matrix :: Matrix{T}, centroids :: Vector{T})
+    mat2param_vect!(params :: Vector{T}, fc_matrix :: Matrix{T}, centroids :: Vector{T}, cell :: AbstractMatrix)
 
 Pack the force constants matrix and centroids vector into a parameters vector.
 Inplace modifies params.
 """
-function mat2param_vect!(params :: AbstractVector, fc_matrix :: AbstractMatrix, centroids :: AbstractVector; 
+function mat2param_vect!(params :: AbstractVector, fc_matrix :: AbstractMatrix, centroids :: AbstractVector, cell :: AbstractMatrix; 
         vector_generators = nothing,
         fc_generators = nothing,
         symmetry_group = nothing) 
@@ -338,12 +339,14 @@ function mat2param_vect!(params :: AbstractVector, fc_matrix :: AbstractMatrix, 
             @views AtomicSymmetries.get_coefficients_from_fc!(params[1:n_vectors],
                                                               centroids, 
                                                               vector_generators, 
-                                                              symmetry_group)
+                                                              symmetry_group, 
+                                                              cell)
         end
         @views AtomicSymmetries.get_coefficients_from_fc!(params[n_vectors+1:end],
                                                           fc_matrix, 
                                                           fc_generators, 
-                                                          symmetry_group)
+                                                          symmetry_group,
+                                                          cell)
     end
 
     end
