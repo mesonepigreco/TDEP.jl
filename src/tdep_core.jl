@@ -55,17 +55,17 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
     # Apply the symmetries on the centroids
     if symmetry_group != nothing
         cell = ustrip.(auconvert.(ensemble.structures[1].cell))
-        println("centroid symmetrization")
+        # println("centroid symmetrization")
         tmp_cent = reshape(centroids, 3, nat)
-        println()
-        println("Before symmetrization: ", tmp_cent')
-        println("Cell: ", cell')
-        println()
+        # println()
+        # println("Before symmetrization: ", tmp_cent')
+        # println("Cell: ", cell')
+        # println()
         symmetrize_positions!(reshape(centroids, 3, nat), 
                               cell,
                               symmetry_group)
-        println("After symmetrization: ", tmp_cent')
-        println()
+        # println("After symmetrization: ", tmp_cent')
+        # println()
     end
 
     for i in 1:n_configs
@@ -115,7 +115,7 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
 
     # Impose the symmetries
     if symmetry_group != nothing
-        println("fc matrix symmetrization")
+        #println("fc matrix symmetrization")
         symmetrize_fc!(fc_matrix, cell, symmetry_group)
     end
 end
@@ -238,9 +238,9 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, average_structure :: AbstractMat
                 end
             end
         end
-        println()
-        println("Least squares: ", least_squares_res / n_structures)
-        println()
+        # println()
+        # println("Least squares: ", least_squares_res / n_structures)
+        # println()
 
         least_squares_res / n_structures
     end
@@ -254,7 +254,7 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, average_structure :: AbstractMat
     results = optimize(least_squares, back_grad!, params, optimizer, optimizer_options)
 
     # copy back 
-    println("Optimization results: ", Optim.minimizer(results))
+    # println("Optimization results: ", Optim.minimizer(results))
     param_vect2mat!(fc_matrix, centroids, Optim.minimizer(results), cell; 
                     vector_generators = vector_generators, 
                     fc_generators = fc_generators, 
