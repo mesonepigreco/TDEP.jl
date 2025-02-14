@@ -88,7 +88,7 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
 
 
     # Now fit the displacement-displacements
-    type = eltype(ustrip(fc_matrix))
+    type = eltype(ustrip.(fc_matrix))
     δrδr_mat = zeros(typeof(zero(type)), 3nat, 3nat)
 
     for i in 1:n_configs
@@ -101,7 +101,7 @@ function tdep_anal!(fc_matrix :: Matrix{T}, centroids :: Vector, ensemble :: Sta
     end
     δrδr_mat ./= n_configs
 
-    ω, p = eigen(ustrip(δrδr_mat))
+    ω, p = eigen(ustrip.(δrδr_mat))
     ω *= unit(δrδr_mat[1])
     fc_matrix .= 0.0
     # Invert the matrix discarding the low energy values
