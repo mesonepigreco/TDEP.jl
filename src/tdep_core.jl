@@ -204,7 +204,7 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
                         symmetry_group = symmetry_group)
 
         # Apply the ASR!
-        asr!(fc_matrix)
+        asr!(fc_matrix; differentiable=true)
         asr!(centroids)
 
         # Get the displacements
