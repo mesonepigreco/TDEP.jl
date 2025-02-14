@@ -135,7 +135,7 @@ The inner algorithm performs the calculation in crystalline space
 If you want to use cartesian coordinates, set `cartesian = true` (default).
 In this case both the input and output data will be assumed to be in cartesian coordinates.
 """
-function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ensemble :: StandardEnsemble;
+function tdep_fit!(fc_matrix :: AbstractMatrix, average_structure :: AbstractMatrix, ensemble :: StandardEnsemble;
         symmetry_group = nothing,
         optimizer = LBFGS(), optimizer_options = Optim.Options(iterations=1000, show_trace = true))
     # Check consistency between sizes
@@ -145,20 +145,23 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
 
     cell = ustrip.(auconvert.(ensemble.structures[1].cell))
 
-    # Convert the input to cartesian
-    @assert nat3 == length(centroids) @assert length(ensemble.structures) == size(ensemble.forces, 3)
+    @assert nat3 == length(average_structure) @assert length(ensemble.structures) == size(ensemble.forces, 3)
 
     # Get the type of the matrix
     T = eltype(ustrip(fc_matrix))
 
     fitted_forces = zeros(T, nat3)
     u_disps = zeros(T, nat3)
+    centroids = zeros(T, nat3)
 
     # If the symmetries are provided, extract the generators
     n_params = count_params(nat)
     vector_generators = nothing
     fc_generators = nothing
     if symmetry_group != nothing
+        # Impose symmetries on the average structure (wyckoff positions)
+        symmetrize_positions!(average_structure, cell, symmetry_group)
+
         # Generators of the displacements
         vector_generators = AtomicSymmetries.get_vector_generators(symmetry_group, cell)
         @info "Finding the generators of the force constants"
@@ -207,6 +210,10 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
         asr!(fc_matrix; differentiable=true)
         asr!(centroids)
 
+        # Add the average structure to the centroids
+        # (Centroids is a displacement vector from the average structure)
+        centroids .+= reshape(average_structure, :)
+
         # Get the displacements
         least_squares_res = zero(T)
         @info "Computing the least squares"
@@ -231,6 +238,9 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
                 end
             end
         end
+        println()
+        println("Least squares: ", least_squares_res / n_structures)
+        println()
 
         least_squares_res / n_structures
     end
@@ -249,6 +259,9 @@ function tdep_fit!(fc_matrix :: AbstractMatrix, centroids :: AbstractVector, ens
                     vector_generators = vector_generators, 
                     fc_generators = fc_generators, 
                     symmetry_group = symmetry_group)
+
+    # Add the wyckoff positions to the centroids
+    centroids .+= reshape(average_structure, :)
     
     # Convert the output to cartesian
     # if cartesian
